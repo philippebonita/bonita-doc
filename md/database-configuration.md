@@ -1,54 +1,49 @@
-# Database configuration for engine data
+# Database configuration 
+
+This page tackles three different usages of databases within the product: Bonita BPM Platform configuration data, engine data, and business data.
 
 ## Database usage
 
 #### Introduction
 
-The Bonita BPM Engine uses an RDBMS (Relational DataBase Management System) to store information about deployed process definitions, process configurations, history of process execution, users, etc.  
+Bonita BPM Engine uses an RDBMS (Relational DataBase Management System) to store information about deployed process definitions, process configurations, history of process execution, users, etc.  
 One database schema is required by Bonita BPM Engine to store all information.
+Starting with Bonita BPM 7.3.0, the same database is also used to store Bonita BPM Platform configuration information, in dedicated tables.
+Finally, Business data are also stored in a database connected to Bonita BPM. We recommend you configure a different database scheme for this purpose.
 
-Bonita BPM Engine connection to the database is done through the Hibernate library (version 4.2).  
+Connections to the databases are done through the Hibernate library (version 4.2).  
 This provides a level of abstraction between the engine and the RDBMS.  
 Bonita BPM comes with a set of optimized initialization scripts for the [supported RDBMSs](https://customer.bonitasoft.com/support-policies).
 
-::: info
-Some configuration file detailed below are located under `setup` folder. See [Bonita BPM platform setup tool](BonitaBPM_platform_setup.md) for more information about platform configuration.
-:::
+#### Default H2 database
 
-::: info
-This page explains database configuration for Bonita BPM Engine data. If you are also using [business data objects](define-and-deploy-the-bdm.md), these can be stored in a separate database. By default, Bonita BPM comes with an h2 database. For production purposes, we recommend that you [configure a different database for business data](database-configuration-for-business-data.md).
-:::
+Bonita BPM Studio, the WildFly bundle, the Tomcat bundle, and the deploy bundle come by default with an H2 RDBMS included in the package. The database is automatically created at first startup, an can be used for all three purposes.
 
-#### Default h2 database
-
-Bonita BPM Studio, the WildFly bundle, the Tomcat bundle, and the deploy bundle come by default with an h2 RDBMS included in the package. The database is automatically created at first startup.
-
-h2 is only suitable for testing purposes.
-For production purposes, you must modify the configuration to use another RDBMS.
+However, H2 is only suitable for testing purposes. For production, you must switch other RDBMS.  
 
 #### Steps to switch to another RDBMS
 
-In order to configure Bonita BPM to work with your RDBMS, you need to perform the following steps:
+In order to configure Bonita BPM to work with your RDBMS, you need to perform the following steps. You will need to do so once for the database dedicated to Bonita BPM Platform configuration information and engine data, and repeat it for the database dedicated to business data:
 
-1. Create the database
-2. Specify the database vendor
-3. Add the JDBC driver
-4. Configure data source
-5. Remove h2
-6. Configure RDBMS-specific settings
+    1. Create the database
+    2. Specify the database vendor
+    3. Add the JDBC driver
+    4. Configure data source
+    5. Customize RDBMS-specific settings
 
 ::: warning
-There are known issues with the management of XA transactions by MySQL engine and driver: see MySQL bugs [17343](http://bugs.mysql.com/bug.php?id=17343) and [12161](http://bugs.mysql.com/bug.php?id=12161) for more details.
+There are known issues with the management of XA transactions by MySQL engine and driver: see MySQL bugs [17343](http://bugs.mysql.com/bug.php?id=17343) and [12161](http://bugs.mysql.com/bug.php?id=12161) for more details.  
 Therefore, using MySQL database in a production environment is not recommended.
 :::
 
 ::: warning
-There is also a known issue between Bitronix (the Transaction Manager shipped by Bonitasoft for the Tomcat bundle & inside Deploy bundle for Tomcat) and Microsoft SQL Server driver (refer to: [MSDN note](https://msdn.microsoft.com/en-us/library/aa342335.aspx), [Bitronix note](http://bitronix-transaction-manager.10986.n7.nabble.com/Failed-to-recover-SQL-Server-Restart-td148.html)).
-Therefore, using Bitronix as a Transaction Manager with SQL Server is not recommended. Our recommendation is to use the WildFly bundle provided by Bonitasoft.
+There is also a known issue between Bitronix (the Transaction Manager shipped by Bonitasoft for the Tomcat bundle & inside Deploy bundle for Tomcat) and Microsoft SQL Server driver (refer to: [MSDN note](https://msdn.microsoft.com/en-us/library/aa342335.aspx), [Bitronix note](http://bitronix-transaction-manager.10986.n7.nabble.com/Failed-to-recover-SQL-Server-Restart-td148.html)).  
+Therefore, using Bitronix as a Transaction Manager with SQL Server is not recommended.  
+Our recommendation is to use the WildFly bundle provided by Bonitasoft.
 :::
 
 ::: warning
-Some RDBMSs require a specific configuration, which must be done before you complete your installation.  
+Some RDBMSs require specific customization, which must be done before you complete your installation.  
 If you do not complete the specific configuration for your RDBMS, your installation may fail.
 :::
 
@@ -56,7 +51,7 @@ If you do not complete the specific configuration for your RDBMS, your installat
 
 ## Database creation
 
-The first step in configuring Bonita with your RDBMS is to create a new database (i.e. a new schema).
+The first step in configuring Bonita BPM with your RDBMS is to create a new database (i.e. a new schema).
 
 To do so, you need a RDBMS user account that has sufficient privileges (i.e. privileges to create new schema).
 
@@ -67,10 +62,11 @@ Also, note that the owner of the new schema must have following privileges:
 * SELECT, INSERT, UPDATE, DELETE on created TABLE
 
 :::info
-CREATE TABLE and CREATE INDEX are not required after first start in normal use. If the same SQL user is used with [migration tool](migrate-from-an-earlier-version-of-bonita-bpm.md), then this user needs this grants.
+CREATE TABLE and CREATE INDEX are not required after first start in normal use.  
+If the same SQL user is used with [migration tool](migrate-from-an-earlier-version-of-bonita-bpm.md), then this user needs this grants.
 :::
 
-To create the database, we recommend you refer to your RDBMS documentation:
+To create the database, we recommend that you refer to your RDBMS documentation:
 
 * [PostgreSQL](http://www.postgresql.org/docs/9.3/static/app-createdb.html)
 * [Oracle database](https://docs.oracle.com/cd/E11882_01/server.112/e25494/create.htm#ADMIN002)
@@ -81,11 +77,14 @@ Your database must be configured to use the UTF-8 character set. You are recomme
 
 ## Specify the database vendor
 
-Bonita BPM Engine needs to know which type of RDBMS you use.  
-This is defined by setting the `sysprop.bonita.db.vendor` JVM system property value.
+Go to the bundle setup/database.properties file and edit the values. One chapter addresses engine/platform configuration, while the next addresses business data.
+
+
+<!-- This is defined by setting the `sysprop.bonita.db.vendor` JVM system property value.
 
 The possible values for `sysprop.bonita.db.vendor` / `db.vendor` are:
-
+-->
+To do so, you need to edit 
 <div class="row"><div class="col-md-6 col-md-offset-1">
 
 | Database vendor | Property value |  
@@ -94,15 +93,14 @@ The possible values for `sysprop.bonita.db.vendor` / `db.vendor` are:
 | Oracle database | oracle |
 | SQL Server | sqlserver |
 | MySQL | mysql |
-| h2 (default for testing, not for production) | h2 |
+| H2 (default for testing, not for production) | H2 |
 
 </div></div>
 
-As example, if you want to use postgres, the line will be:
+As an example, if you want to use PostgreSQL, the line will be:
 `db.vendor=postgres`
 
 The way to define JVM system properties depends on your application server type:
-
 * WildFly: edit `<WILDFLY_HOME>/standalone/configuration/standalone.xml` and set the value of `sysprop.bonita.db.vendor` (look for `<system-properties>` tag).
 * Tomcat: edit `setenv.sh` (for Linux) or `setenv.bat` (for Windows) and change the value of `sysprop.bonita.db.vendor` on the line starting by `DB_OPTS`.
 * For other application servers, refer to your application server documentation.
@@ -110,7 +108,7 @@ The way to define JVM system properties depends on your application server type:
 An alternative to setting the JVM system property (`sysprop.bonita.db.vendor`) is to set `db.vendor` property value in the
 [`bonita-platform-community-custom.properties`](BonitaBPM_platform_setup.md) file.
 The default value of `db.vendor` indicates that the value of the JVM system property value must be used.
-If the property is not defined, the fallback value is h2: `db.vendor=${sysprop.bonita.db.vendor:h2}`
+If the property is not defined, the fallback value is H2: `db.vendor=${sysprop.bonita.db.vendor:h2}`
 
 ## Add the JDBC driver
 
@@ -250,6 +248,8 @@ Now that you are almost done with the switch from h2 to your chosen RDBMS, you c
 * For Tomcat
   * Remove h2 jar files (`h2-1.3.170.jar`). Files are located in: `<TOMCAT_HOME>/lib` or in `<TOMCAT_HOME>/lib/bonita`.
   * Check that h2 is no longer set in JVM system property value. Also, for extra security, you can remove it from `bonita-platform.properties` file and replace it with the value for your chosen RDBMS.
+
+<a id="specific_database_configuration" />
 
 ## Specific database configuration
 
