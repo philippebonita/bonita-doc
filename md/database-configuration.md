@@ -25,11 +25,12 @@ However, H2 is only suitable for testing purposes. When building a production en
 As suggested earlier, if you use the BDM (Business Data Model) feature to store business data related to the scope of your applications and processes, you will need to configure two databases: one for Bonita BPM Platform configuration data and engine data, and one for business data.
 
 Here are the steps to follow:
-    1. Create the database(s)
+    1. Create the database
     2. Customize RDBMS to make it work with Bonita BPM    
-    3. Add the JDBC driver to the bundle
+    3. Add the JDBC driver to the bundle if the database is proprietary
     4. Configure the bundle with database information 
-    
+Each one will be detailed further down this page.
+
 ::: warning
 All RDBMSs require specific customization, which must be done before you complete your installation.  
 If you do not complete the specific configuration for your RDBMS, your installation may fail.
@@ -80,7 +81,6 @@ Also, you are recommended to configure the database(s) to be case-insensitive so
 
 ## Customize RDBMS to make it work with Bonita BPM    
 
-
 ### PostgreSQL
 
 Configure the database to use UTF-8\.
@@ -101,15 +101,14 @@ Bonita BPM Engine uses datasources that handle global transactions that span res
 The procedure below is used to create the settings to enable Bonita BPM Engine to connect to the Oracle database.
 
 It is assumed in the procedure that:
-
-* Oracle product is already installed and running
-* An 'Oracle' OS user is already created
-* A database already exists
-* The environment is already set:
-  ```
-  ORACLE_HOME=/u01/app/oracle/product/11.2.0/dbhome_1
-  ORACLE_SID=...
-  ```
+   * Oracle product is already installed and running
+   * An 'Oracle' OS user is already created
+   * A database already exists
+   * The environment is already set:
+     ```
+    ORACLE_HOME=/u01/app/oracle/product/11.2.0/dbhome_1
+    ORACLE_SID=...
+    ```
 
 1. Connect to the database as the System Administrator.
    ```bash
@@ -162,7 +161,7 @@ It is assumed in the procedure that:
 #### SQL Server
 
 ::: warning
-There is a known issue between Bitronix (the Transaction Manager shipped by Bonitasoft in the Tomcat bundle and in the Tomcat directories of the Deploy bundle) and the Microsoft SQL Server driver
+**Reminder:** There is a known issue between Bitronix (the Transaction Manager shipped by Bonitasoft in the Tomcat bundle and in the Tomcat directories of the Deploy bundle) and the Microsoft SQL Server driver
 (refer to: [MSDN note](https://msdn.microsoft.com/en-us/library/aa342335.aspx), [Bitronix note](http://bitronix-transaction-manager.10986.n7.nabble.com/Failed-to-recover-SQL-Server-Restart-td148.html)).
 Therefore, using Bitronix as a Transaction Manager with SQL Server is not recommended. Our recommendation is to use the WildFly bundle provided by Bonitasoft.
 :::
@@ -179,7 +178,7 @@ Here is the list of steps to perform (as an example, the database name BONITA\_B
 4. Execute the query in the Query Editor.
 5. To confirm successful execution of the script, open the "Object Explorer" and go to: **Master** \> **Programmability** \> **Extended Stored Procedures**.  
    You should have 12 new procedures, each with a name starting with `dbo.xp.sqljdbc_xa_`.
-6. Assign the new role 'SqlJDBCXAUser' to the user who owns the Bonita BPM Engine database (`bonitadev` in our example). To do this, execute the following commands in SQL editor:
+6. Assign the new role 'SqlJDBCXAUser' to the user who owns the Bonita BPM Engine database (`bonitadev` in our example). To do so, execute the following commands in SQL editor:
    ```sql
    USE master;
    GO
@@ -220,12 +219,12 @@ See [MSDN](https://msdn.microsoft.com/en-us/library/ms175095(v=sql.110).aspx).
 
 ##### Maximum packet size
 
-MySQL defines a maximum packet size on the server side. The default value for this settings are appropriate for most standard use cases.
+MySQL defines a maximum packet size on the server side. The default value for this setting is appropriate for most standard use cases.
 However, you need to increase the packet size if you see the following error:
 `Error: 1153 SQLSTATE: 08S01 (ER_NET_PACKET_TOO_LARGE) Message: Got a packet bigger than 'max_allowed_packet' bytes`
 
 You need to update the file `my.ini` (for Windows) or `my.cnf` (for Linux) to avoid the `ER_NET_PACKET_TOO_LARGE` problem.
-Look for `max_allowed_packet` settings and reduce the value.
+Look for `max_allowed_packet` setting and reduce the value.
 
 For more information, see the [MySQL website](http://dev.mysql.com/doc/refman/5.5/en/packet-too-large.html).
 
@@ -236,7 +235,7 @@ If you want to use surrogate characters in your processes, you need to use anoth
 
 ## Add the JDBC driver to the bundle
 
-#### Download JDBC driver
+### Download JDBC driver
 
 First, you need to download the JDBC driver for your database system. Use the links below to download the driver.
 
@@ -251,20 +250,16 @@ First, you need to download the JDBC driver for your database system. Use the li
 
 <a id="jdbc_driver"/>
 
-#### Add JDBC driver to application server
+### Add JDBC driver to the application server
 
 The way to install the JDBC driver depends on the application server:
 
-##### WildFly 10
+#### WildFly 10
 
 WildFly 10 manages JDBC drivers as modules, so to add a new JDBC driver, complete these steps:
-(see [WildFly documentation](https://docs.jboss.org/author/display/WFLY10/DataSource+configuration) for full reference):
-
-* Create a folder structure under `<WILDFLY_HOME>/modules` folder.  
-  Refer to the table below to identify the folders to create.  
-  The last folder is named `main` for all JDBC drivers.
-* Add the JDBC driver jar file to the `main` folder.
-* Create a module description file `module.xml` in `main` folder.
+    1. Create a folder structure under `<WILDFLY_HOME>/modules` folder.  
+       Refer to the table below to identify the folders to create.  
+       The last folder is named `main` for all JDBC drivers.
 
 | Database vendor | Module folders | Module description file |
 | :- | :- | :- |
@@ -273,16 +268,17 @@ WildFly 10 manages JDBC drivers as modules, so to add a new JDBC driver, complet
 | SQL Server | modules/com/sqlserver/main | [module.xml](images/special_code/sqlserver/module.xml) |
 | MySQL | modules/com/mysql/main | [module.xml](images/special_code/mysql/module.xml) |
 
-Put the driver jar file in the relevant `main` folder.
-
-In the same folder as the driver, add the module description file, `module.xml`.
-This file describes the dependencies the module has and the content it exports.
-It must describe the driver jar and the JVM packages that WildFly 10 does not provide automatically.
-The exact details of what must be included depend of the driver jar.
-**Warning:** You might need to edit the `module.xml` in order to match exactly the JDBC driver jar file name.
+    2. Add the JDBC driver jar file to the `main` folder.
+    3. Create a module description file `module.xml` in `main` folder.
+    4. Put the driver jar file in the relevant `main` folder.
+    5. In the same folder as the driver, add the module description file, `module.xml`.
+       This file describes the dependencies the module has and the content it exports.  
+       It must describe the driver jar and the JVM packages that WildFly 10 does not provide automatically.  
+       The exact details of what must be included depend of the driver jar.  
+       **Warning:** You might need to edit the `module.xml` in order to match exactly the JDBC driver jar file name.
 
 ::: info  
-**Note:** By default, when WildFly, it removes any comments from `standalone/configuration/standalone.xml` and formats the file.
+**Note:** By default, WildFly removes any comment from `standalone/configuration/standalone.xml` and formats the file.
 If you need to retrieve the previous version of this file, go to `standalone/configuration/standalone_xml_history`.
 :::
 
@@ -294,6 +290,7 @@ For Tomcat, simply add the JDBC driver jar file in the appropriate folder:
 * Bonita BPM deploy bundle: in the Tomcat folder add the driver to the `lib` folder.
 * Ubuntu/Debian package: add the driver to `/usr/share/tomcat7/lib`.
 * Windows as a service: add the driver to `C:\Program Files\Apache Software Foundation\Tomcat 7.0\lib`
+
 
 ## Configure the bundle with database information 
 
@@ -314,55 +311,11 @@ The table below shows the match between the database vendor you want to use and 
 As an example, if you want to use PostgreSQL, the line will be:
 `db.vendor=postgres`
 
-<!-- [Nath must add all locations to change] 
+Then add the `db.server.name`, `db.server.port`, and the `db.database.name`, the `db.user`and the `db.password`.
 
-#########################################
-# Bonita BPM internal database properties
-#########################################
-
-# valid values are (h2, postgres, sqlserver, oracle, mysql)
-db.vendor=h2
-# when using h2, no server or port setting is needed since connexion is made using file protocol mode using relative directory.
-# db.server.name=localhost
-# db.server.port=5432
-db.database.name=bonita_journal.db
-db.user=sa
-db.password=
-
-###################################
-# Business Data database properties
-###################################
-# valid values are (h2, postgres, sqlserver, oracle, mysql)
-bdm.db.vendor=h2
-# bdm.db.server.name=localhost
-# bdm.db.server.port=5432
-bdm.db.database.name=business_data.db
-bdm.db.user=sa
-bdm.db.password=
-
-
-# IMPORTANT NOTE regarding H2 database:
-# in case you move whole setup folder to another directory, you must change property below
-# to point to original folder containing h2 database folder
-# new value can be relative or absolute since it still points to the right folder
-h2.database.dir=../database
-* Address of the RDBMS server
-* Port number of the RDBMS server
-* Database (schema) name
-* User name to connect to the database
-* Password to connect to the database
-* JDBC Driver fully qualified class name (see table below)
-* XADataSource fully qualified class name (see table below)
-An alternative to setting the JVM system property (`sysprop.bonita.db.vendor`) is to set `db.vendor` property value in the
-[`bonita-platform-community-custom.properties`](BonitaBPM_platform_setup.md) file.
-The default value of `db.vendor` indicates that the value of the JVM system property value must be used.
-If the property is not defined, the fallback value is H2: `db.vendor=${sysprop.bonita.db.vendor:h2}`
--->
-
+<!-- Do we still need the rest of the page? -->
 Bonita BPM Engine requires the configuration of two data sources. The data source declaration defines how to connect to the RDBMS. The following information is required to configure the data sources:
 
-
-<!-- still needed? -->
 | Database vendor | Driver class name | XADataSource class name |
 |:-|:-|:-|
 | PostgreSQL | org.postgresql.Driver | org.postgresql.xa.PGXADataSource |
@@ -379,11 +332,10 @@ There is also an [example of how to configure datasources for Weblogic](red-hat-
 #### WildFly
 
 This section explains how to configure the data sources if you are using WildFly:
-
-1. Open the file `<WILDFLY_HOME>/standalone/configuration/standalone.xml`.
-2. Comment out the default definition for h2\.
-3. Uncomment the settings matching your RDBMS vendor.
-4. Modify the values for following settings to your configuration: server address, server port, database name, user name and password.
+    1. Open the file `<WILDFLY_HOME>/standalone/configuration/standalone.xml`.
+    2. Comment out the default definition for H2\.
+    3. Uncomment the settings matching your RDBMS vendor.
+    4. Modify the values for following settings to your configuration: server address, server port, database name, user name and password.
 
 **Note:** For a first test, you might want to keep the H2 section related to Business Data Management (BDM) feature (driver and data sources configuration). You can update the configuration related to BDM later.
 
