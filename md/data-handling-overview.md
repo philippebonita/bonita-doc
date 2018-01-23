@@ -29,6 +29,7 @@ Key benefits of using business data:
 * Full control of lifecycle of the data through the set of processes that handle it (add, update and delete)
 * Improved performance compared with process variables or external databases
 * Easier application maintenance
+* Can be defined at tenant level (i.e. each tenant has its own business data model) 
 
 An application page accesses business data using the [bdm REST API](bdm-api.md). A page also contains page [variables](variables.md), which have no meaning outside the page.
 
