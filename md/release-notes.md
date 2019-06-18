@@ -331,7 +331,7 @@ This can be done in two different ways:
 
 For more information, see [how to embed Bonita Engine](embed-engine.md).
 
-**Warning**: This is a Lab feature and is subject to change without warning in any version. It is not recommended for production.
+**Warning**: This is a Lab feature and is subject to change without warning in any version. 
 
 ## Feature deprecations and removals
 
